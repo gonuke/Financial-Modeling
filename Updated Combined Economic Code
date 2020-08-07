@@ -6,7 +6,7 @@ import datetime
 MW2KW = 1000
 HrPerYr = 8760
 HrPerDay = 24
-DaysOfPowerPerYear = 365
+DaysOfPowerPerYear = 365.25
 
 
 def select_lng(Scenario, generation_type_one, generation_type_two, my_data):
