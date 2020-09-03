@@ -1,5 +1,6 @@
 import numpy as np
 import yaml
+import argparse
 import pandas as pd
 import datetime
 import statistics
@@ -83,6 +84,7 @@ def initialize_real_fuel_costs(my_data):
     else:
         print("error enter proper fuel cost")
     return my_data
+
 def Mean(x):
     return statistics.mean(x)
 def StandardDeviation(x):
@@ -96,7 +98,7 @@ def UpperCILimit(x, iterations):
 def LowerCILimit(x, iterations):
     return Mean(x) - NinetyFivePercentCIHalfWidth(x, iterations)
 
-def monte_carlo_analysis(my_data):
+def monte_carlo_analysis(my_data, case_list):
     OneNuclear = []
     OneDiesel = []
     OneNaturalGas = []
@@ -113,7 +115,7 @@ def monte_carlo_analysis(my_data):
     iterations = int(input("Enter Number of Iterations for Monte Carlo Analysis:", ))
     for j in range (1, iterations+1):
         Monte_Carlo_List = []
-        Monte_Carlo_List = monte_carlo_distribution(my_data)
+        Monte_Carlo_List = monte_carlo_distribution(my_data, case_list)
         OneNuclear.append(Monte_Carlo_List[0])
         OneDiesel.append(Monte_Carlo_List[1])
         OneNaturalGas.append(Monte_Carlo_List[2])
@@ -148,7 +150,7 @@ def monte_carlo_analysis(my_data):
     dfResults['Lower CI Limit'] = dfResults.apply(lambda x: "{0:,.2f}".format(x['Lower CI Limit']), axis=1)
     print(dfResults)        
         
-def monte_carlo_distribution(my_data):
+def monte_carlo_distribution(my_data, case_list):
     Results = []
     for Scenario, cases in case_list.items():
         Scenario == 'Scenario1'
@@ -179,7 +181,7 @@ def monte_carlo_distribution(my_data):
                                       generation_type_two_data, interest))
     return Results
 
-def sensitivity_analysis(my_data):
+def sensitivity_analysis(my_data, case_list):
     interest_rates = list(my_data['model_assumptions']['SensitivityInterestRates'])
     for Scenario, cases in case_list.items():
         for generation_type_one, generation_type_two in cases:
@@ -208,7 +210,7 @@ def sensitivity_analysis(my_data):
     dfResults.to_excel(writer_orig, index=False, sheet_name='Sensitivity Inputs')
     writer_orig.save()
     
-def main_code(my_data):
+def main_code(my_data, case_list):
     generation_variation_nuclear = input("Enter Nuclear: Best, Median, Worst",)
     generation_variation_diesel = input("Enter Diesel: Best, Median, Worst",)
     generation_variation_naturalgas = input("Enter Natural Gas: Best, Median, Worst",)
@@ -228,25 +230,89 @@ def main_code(my_data):
     dfResults = pd.DataFrame(Results, columns = ['Scenario', 'Power Type','Backup', 'interest','Annual Payment'])
     dfResults['Annual Payment'] = dfResults.apply(lambda x: "{0:,.2f}".format(x['Annual Payment']), axis=1)
     print(dfResults)
+
+
+def read_args():
+
+    default_interest_rate = 0.02
+
+    parser = argparse.ArgumentParser()
+
+    subparsers = parser.add_subparsers()
+
+    parser_mc = subparsers.add_parser('monte_carlo')
+    parser_sens = subparsers.add_parser('sensitivity')
+    parser_single = subparsers.add_parser('single')
+
+    for subparser in [parser_mc, parser_single]:
+        subparser.add_argument('-i', '--interest_rate', type=float,
+                            help="interest rate to use for this analysis (default: {:.2f})".format(default_interest_rate),
+                            default=default_interest_rate)
+    default_samples = 20
+    parser_mc.add_argument('-N', '--num_samples', type=int,
+                            help="number of Monte Carlo samples (default: {:d})".format(default_samples),
+                            default=default_samples)
+    parser_mc.set_defaults(func=run_mc)
     
-if __name__ == "__main__":
- Results = []
- my_data = load_inputs()
- my_data = initialize_real_fuel_costs(my_data)
- case_list = {
-    'Scenario1': list(zip(['None','None','None'], ['Nuclear','Diesel','NaturalGas'])), 
-    'Scenario2': list(zip(['Nuclear','Diesel','NaturalGas'],['None','None','None'])),
-    'Scenario3': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel'])),
-    'Scenario4': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel']))
+
+    parser_sens.set_defaults(func=run_sensitivity)
+    
+    case_choices = ['Best', 'Median', 'Worst']
+    parser_single.add_argument('--nuclear-case',choices=case_choices,
+                                help="Which case to use for nuclear costs",
+                                default='Median')
+    parser_single.add_argument('--gas-case',choices=case_choices,
+                                help="Which case to use for natural gas costs",
+                                default='Median')
+    parser_single.add_argument('--diesel-case',choices=case_choices,
+                                help="Which case to use for diesel costs",
+                                default='Median')
+    parser_single.set_defaults(func=run_single)
+
+    for subparser in [parser_mc, parser_sens, parser_single]:
+        subparser.add_argument('filename', help="YAML file with economic data")
+
+    return parser.parse_args()
+
+def init():
+
+    my_data = load_inputs()
+    my_data = initialize_real_fuel_costs(my_data)
+
+    case_list = {
+        'Scenario1': list(zip(['None','None','None'], ['Nuclear','Diesel','NaturalGas'])), 
+        'Scenario2': list(zip(['Nuclear','Diesel','NaturalGas'],['None','None','None'])),
+        'Scenario3': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel'])),
+        'Scenario4': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel']))
             }
- model_type = input("s / m / mc--   sensitivity or main or monte carlo",)
- if model_type == "m":
-    interest = float(input("Enter interest rate in decimal: ex. .02 for 2%",))
-    main_code(my_data)
- elif model_type == "s":
-    sensitivity_analysis(my_data)
- elif model_type == 'mc':
-    interest = float(input("Enter interest rate in decimal: ex. .02 for 2%",))
-    monte_carlo_analysis(my_data)
- else:
-    print("error: s or m ONLY")
+
+    return my_data, case_list
+
+def run_mc(args):
+
+    my_data, case_list = init()
+
+    interest = args.interest_rate
+    monte_carlo_analysis(my_data, case_list)
+
+def run_sensitivity(args):
+
+    my_data, case_list = init()
+
+    sensitivity_analysis(my_data, case_list)
+
+def run_single(args):
+
+    my_data, case_list = init()
+
+    interest = args.interest_rate
+    main_code(my_data, case_list)
+
+
+if __name__ == "__main__":
+  args = read_args()
+
+  Results = []
+
+  args.func(args)
+
