@@ -2,12 +2,13 @@ import numpy as np
 import yaml
 import pandas as pd
 import datetime
+import statistics
+import math
 
 MW2KW = 1000
 HrPerYr = 8760
 HrPerDay = 24
 DaysOfPowerPerYear = 365
-
 
 def select_lng(Scenario, generation_type_one, generation_type_two, my_data):
     if Scenario == 'Scenario4' and generation_type_one == 'NaturalGas':
@@ -20,10 +21,7 @@ def select_lng(Scenario, generation_type_one, generation_type_two, my_data):
         my_data['generation_data']['NaturalGas']['Worst']['RealFuelCost']= my_data['model_assumptions']['LNG']['Worst']
     return my_data
 
-
 def pmt_total(Scenario, generation_type_one_data, generation_type_two_data, interest):
-
-
     return evaluate_generation_costs_utility(Scenario)+evaluate_generation_costs_one(Scenario, generation_type_one_data, interest)+evaluate_generation_costs_two(Scenario, generation_type_two_data, interest)
     
 def evaluate_generation_costs_utility(Scenario):
@@ -54,7 +52,6 @@ def evaluate_generation_costs_one(Scenario, generation_type_one_data, interest):
         
         return -np.pmt(interest, generation_type_one_data['AssetLife'], npv_capital+npv_om+npv_decommission+npv_refurb+npv_fuel)
 
-
 def evaluate_generation_costs_two(Scenario, generation_type_two_data, interest):
 
         total_annual_generation = my_data['scenario_assumptions'][Scenario]['BackupPower']*HrPerDay*MW2KW*my_data['model_assumptions']['DaysOfBackupPower']
@@ -66,7 +63,6 @@ def evaluate_generation_costs_two(Scenario, generation_type_two_data, interest):
     
         return -np.pmt(interest, generation_type_two_data['AssetLife'], npv_capital+npv_om+npv_reserve+npv_fuel)
     
-
 def load_inputs():
 
     with open('inputs.yml', 'r') as yaml_file:
@@ -87,62 +83,101 @@ def initialize_real_fuel_costs(my_data):
     else:
         print("error enter proper fuel cost")
     return my_data
+def Mean(x):
+    return statistics.mean(x)
+def StandardDeviation(x):
+    return statistics.stdev(x)
+def StandardError(x, iterations):
+    return StandardDeviation(x)/math.sqrt(iterations)
+def NinetyFivePercentCIHalfWidth(x, iterations):
+    return 1.96*StandardError(x,iterations)
+def UpperCILimit(x, iterations):
+    return Mean(x) + NinetyFivePercentCIHalfWidth(x, iterations)
+def LowerCILimit(x, iterations):
+    return Mean(x) - NinetyFivePercentCIHalfWidth(x, iterations)
 
 def monte_carlo_analysis(my_data):
-    Monte_Carlo_List = []
+    OneNuclear = []
+    OneDiesel = []
+    OneNaturalGas = []
+    TwoNuclear= []
+    TwoDiesel = []
+    TwoNaturalGas = []
+    ThreeNuclear = []
+    ThreeDiesel = []
+    ThreeNaturalGas = []
+    FourNuclear = []
+    FourDiesel = []
+    FourNaturalGas = []
+    ScenarioList = [OneNuclear, OneDiesel, OneNaturalGas , TwoNuclear, TwoDiesel , TwoNaturalGas,  ThreeNuclear ,ThreeDiesel ,ThreeNaturalGas,FourNuclear ,FourDiesel ,FourNaturalGas]
     iterations = int(input("Enter Number of Iterations for Monte Carlo Analysis:", ))
     for j in range (1, iterations+1):
-        print("BEGINNING")
-        #monte_carlo_distribution(my_data)
-        print("MIDDLE")
-        Monte_Carlo_List.append(monte_carlo_distribution(my_data))
-        print("END")
-        print(Monte_Carlo_List)
-        print(j)
-        
+        Monte_Carlo_List = []
+        Monte_Carlo_List = monte_carlo_distribution(my_data)
+        OneNuclear.append(Monte_Carlo_List[0])
+        OneDiesel.append(Monte_Carlo_List[1])
+        OneNaturalGas.append(Monte_Carlo_List[2])
+        TwoNuclear.append(Monte_Carlo_List[3])
+        TwoDiesel.append(Monte_Carlo_List[4])
+        TwoNaturalGas.append(Monte_Carlo_List[5])
+        ThreeNuclear.append(Monte_Carlo_List[6])
+        ThreeDiesel.append(Monte_Carlo_List[7])
+        ThreeNaturalGas.append(Monte_Carlo_List[8])
+        FourNuclear.append(Monte_Carlo_List[9])
+        FourDiesel.append(Monte_Carlo_List[10])
+        FourNaturalGas.append(Monte_Carlo_List[11])
+        if j == .25*iterations or j == .5*iterations or j == .75*iterations or j== .9*iterations:
+            print("Progress: "+"%{:.0f}".format(100*j/iterations),"Iteration #: "+"{:.0f}".format(j))
+    for x in ScenarioList:
+        Mean(x)
+        StandardDeviation(x)
+        StandardError(x, iterations)
+        NinetyFivePercentCIHalfWidth(x, iterations)
+        UpperCILimit(x, iterations)
+        LowerCILimit(x, iterations)
+        Results.append([Mean(x), StandardDeviation(x), StandardError(x, iterations), NinetyFivePercentCIHalfWidth(x, iterations), UpperCILimit(x, iterations), LowerCILimit(x, iterations), iterations])
+    dfResults = pd.DataFrame(Results, columns = [ 'Mean', 'Standard Deviation','Standard Error', 'NinetyFive% CI HW','Upper CI Limit', 'Lower CI Limit', '# of iterations'])
+    dfResults.insert(0,'Scenario & tech combo', ['Scenario1 None Nuclear','Scenario1 None Diesel','Scenario1 None NaturalGas','Scenario2 Nuclear None','Scenario2 Diesel None','Scenario2 NaturalGas None','Scenario3 Nuclear Diesel','Scenario3 Diesel NaturalGas','Scenario3 NaturalGas Diesel','Scenario4 Nuclear Diesel','Scenario4 Diesel NaturalGas','Scenario4 NaturalGas Diesel'], True)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
+    dfResults['Mean'] = dfResults.apply(lambda x: "${:,.2f}".format(x['Mean']), axis=1)
+    dfResults['Standard Deviation'] = dfResults.apply(lambda x: "{:,.2f}".format(x['Standard Deviation']), axis=1)
+    dfResults['Standard Error'] = dfResults.apply(lambda x: "${0:,.2f}".format(x['Standard Error']), axis=1)
+    dfResults['NinetyFive% CI HW'] = dfResults.apply(lambda x: "${0:,.2f}".format(x['NinetyFive% CI HW']), axis=1)
+    dfResults['Upper CI Limit'] = dfResults.apply(lambda x: "{0:,.2f}".format(x['Upper CI Limit']), axis=1)
+    dfResults['Lower CI Limit'] = dfResults.apply(lambda x: "{0:,.2f}".format(x['Lower CI Limit']), axis=1)
+    print(dfResults)        
         
 def monte_carlo_distribution(my_data):
-    print("WTF")
+    Results = []
     for Scenario, cases in case_list.items():
-        print("Woah")
-        print(Scenario, cases)
+        Scenario == 'Scenario1'
         for generation_type_one, generation_type_two in cases:
-            print("skjkj")
             my_data = select_lng(Scenario,generation_type_one, generation_type_two, my_data)
-            print("ACTION")
             Sensitive_list = list(my_data['generation_data']['Nuclear']['Median'].keys())
             Sensitive_list.remove('FuelCost')
             Sensitive_list.remove('AltFuelCost')
             Sensitive_list.remove('HeatRate')
+            generation_type_one_data = dict(my_data['generation_data'][generation_type_one]['Median'])
+            generation_type_two_data = dict(my_data['generation_data'][generation_type_two]['Median'])
             for x in Sensitive_list:
                 for z in [generation_type_one,generation_type_two]:
-                    generation_type_one_data = dict(my_data['generation_data'][generation_type_one]['Median'])
-                    generation_type_two_data = dict(my_data['generation_data'][generation_type_two]['Median'])
                     if z == generation_type_one and my_data['generation_data'][z]['Worst'][x] < my_data['generation_data'][z]['Best'][x]:
                         generation_type_one_data[x] = np.random.triangular(my_data['generation_data'][z]['Worst'][x],my_data['generation_data'][z]['Median'][x],my_data['generation_data'][z]['Best'][x])
-                        print(x, z)
                     elif z == generation_type_one and my_data['generation_data'][z]['Worst'][x] > my_data['generation_data'][z]['Best'][x]:
                         generation_type_one_data[x] = np.random.triangular(my_data['generation_data'][z]['Best'][x],my_data['generation_data'][z]['Median'][x],my_data['generation_data'][z]['Worst'][x])
-                        print(x, z)
                     elif z == generation_type_one and my_data['generation_data'][z]['Worst'][x] == my_data['generation_data'][z]['Best'][x]:
                         generation_type_one_data[x] = np.random.uniform(my_data['generation_data'][z]['Best'][x],my_data['generation_data'][z]['Worst'][x])
-                        print(x, z)
                     elif z == generation_type_two and my_data['generation_data'][z]['Worst'][x] < my_data['generation_data'][z]['Best'][x]:
                         generation_type_two_data[x] = np.random.triangular(my_data['generation_data'][z]['Worst'][x],my_data['generation_data'][z]['Median'][x],my_data['generation_data'][z]['Best'][x])
-                        print(x, z)
                     elif z == generation_type_two and my_data['generation_data'][z]['Worst'][x] > my_data['generation_data'][z]['Best'][x]:
                         generation_type_two_data[x] = np.random.triangular(my_data['generation_data'][z]['Best'][x],my_data['generation_data'][z]['Median'][x],my_data['generation_data'][z]['Worst'][x])
-                        print(x, z)
                     else:
-                        generation_type_one_data[x] = np.random.uniform(my_data['generation_data'][z]['Best'][x],my_data['generation_data'][z]['Worst'][x])
-                        print(x, z)
-            Results.append([Scenario, generation_type_one, generation_type_two, interest, 
+                        generation_type_two_data[x] = np.random.uniform(my_data['generation_data'][z]['Best'][x], my_data['generation_data'][z]['Worst'][x])
+            Results.append( 
                             pmt_total(Scenario, generation_type_one_data,
-                                      generation_type_two_data, interest)])
-            print(Results[0][4])
+                                      generation_type_two_data, interest))
     return Results
-            
-            
 
 def sensitivity_analysis(my_data):
     interest_rates = list(my_data['model_assumptions']['SensitivityInterestRates'])
@@ -199,10 +234,10 @@ if __name__ == "__main__":
  my_data = load_inputs()
  my_data = initialize_real_fuel_costs(my_data)
  case_list = {
-    'Scenario1': zip(['None','None','None'], ['Nuclear','Diesel','NaturalGas']), 
-    'Scenario2': zip(['Nuclear','Diesel','NaturalGas'],['None','None','None']),
-    'Scenario3': zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel']),
-    'Scenario4': zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel'])
+    'Scenario1': list(zip(['None','None','None'], ['Nuclear','Diesel','NaturalGas'])), 
+    'Scenario2': list(zip(['Nuclear','Diesel','NaturalGas'],['None','None','None'])),
+    'Scenario3': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel'])),
+    'Scenario4': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel']))
             }
  model_type = input("s / m / mc--   sensitivity or main or monte carlo",)
  if model_type == "m":
