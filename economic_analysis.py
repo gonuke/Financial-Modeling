@@ -71,13 +71,12 @@ def load_inputs():
 
     return inputs
 
-def initialize_real_fuel_costs(my_data):
-    fuel_type = input("Enter: f    for fuel in $/Kwh   or    Alt   for $/mmBTU",)
-    if fuel_type == 'f':
+def initialize_real_fuel_costs(my_data, fuel_type):
+    if fuel_type == 'std':
      for generation_type, generation_type_data in my_data['generation_data'].items():
         for generation_variation in generation_type_data: 
                my_data['generation_data'][generation_type][generation_variation]['RealFuelCost'] = my_data['generation_data'][generation_type][generation_variation]['FuelCost']
-    elif fuel_type == 'Alt':
+    elif fuel_type == 'alt':
         for generation_type, generation_type_data in my_data['generation_data'].items():
             for generation_variation in generation_type_data: 
                my_data['generation_data'][generation_type][generation_variation]['RealFuelCost'] = my_data['generation_data'][generation_type][generation_variation]['AltFuelCost']* my_data['generation_data'][generation_type][generation_variation]['HeatRate']
@@ -98,7 +97,7 @@ def UpperCILimit(x, iterations):
 def LowerCILimit(x, iterations):
     return Mean(x) - NinetyFivePercentCIHalfWidth(x, iterations)
 
-def monte_carlo_analysis(my_data, case_list):
+def monte_carlo_analysis(my_data, case_list, iterations):
     OneNuclear = []
     OneDiesel = []
     OneNaturalGas = []
@@ -112,7 +111,6 @@ def monte_carlo_analysis(my_data, case_list):
     FourDiesel = []
     FourNaturalGas = []
     ScenarioList = [OneNuclear, OneDiesel, OneNaturalGas , TwoNuclear, TwoDiesel , TwoNaturalGas,  ThreeNuclear ,ThreeDiesel ,ThreeNaturalGas,FourNuclear ,FourDiesel ,FourNaturalGas]
-    iterations = int(input("Enter Number of Iterations for Monte Carlo Analysis:", ))
     for j in range (1, iterations+1):
         Monte_Carlo_List = []
         Monte_Carlo_List = monte_carlo_distribution(my_data, case_list)
@@ -210,10 +208,10 @@ def sensitivity_analysis(my_data, case_list):
     dfResults.to_excel(writer_orig, index=False, sheet_name='Sensitivity Inputs')
     writer_orig.save()
     
-def main_code(my_data, case_list):
-    generation_variation_nuclear = input("Enter Nuclear: Best, Median, Worst",)
-    generation_variation_diesel = input("Enter Diesel: Best, Median, Worst",)
-    generation_variation_naturalgas = input("Enter Natural Gas: Best, Median, Worst",)
+def main_code(my_data, case_list, 
+              generation_variation_nuclear,
+              generation_variation_naturalgas,
+              generation_variation_diesel):
     generation_variation_none = 'Median'
     generation_variation = { 'Nuclear': generation_variation_nuclear,
                             'Diesel': generation_variation_diesel, 
@@ -270,14 +268,16 @@ def read_args():
     parser_single.set_defaults(func=run_single)
 
     for subparser in [parser_mc, parser_sens, parser_single]:
+        subparser.add_argument('-f', '--fuelcost_type', choices=['std', 'alt'],
+                                default='std')
         subparser.add_argument('filename', help="YAML file with economic data")
 
     return parser.parse_args()
 
-def init():
+def init(fuelcost_type):
 
     my_data = load_inputs()
-    my_data = initialize_real_fuel_costs(my_data)
+    my_data = initialize_real_fuel_costs(my_data, fuelcost_type)
 
     case_list = {
         'Scenario1': list(zip(['None','None','None'], ['Nuclear','Diesel','NaturalGas'])), 
@@ -290,23 +290,23 @@ def init():
 
 def run_mc(args):
 
-    my_data, case_list = init()
+    my_data, case_list = init(args.fuelcost_type)
 
     interest = args.interest_rate
-    monte_carlo_analysis(my_data, case_list)
+    monte_carlo_analysis(my_data, case_list, args.num_samples)
 
 def run_sensitivity(args):
 
-    my_data, case_list = init()
+    my_data, case_list = init(args.fuelcost_type)
 
     sensitivity_analysis(my_data, case_list)
 
 def run_single(args):
 
-    my_data, case_list = init()
+    my_data, case_list = init(args.fuelcost_type)
 
     interest = args.interest_rate
-    main_code(my_data, case_list)
+    main_code(my_data, case_list, args.nuclear_case, args.gas_case, args.diesel_case)
 
 
 if __name__ == "__main__":
