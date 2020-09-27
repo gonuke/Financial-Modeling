@@ -1,0 +1,182 @@
+model_assumptions:
+  UtilityRate: .06     # in $/KwH
+  DaysOfBackupPower: 7  # in Days
+  DaysOfResilience: 7   # in Days
+  SensitivityInterestRates:  # All in decimal form
+    - .02
+    - .04
+    - .06
+    - .08
+    - .1
+  LNG:
+    Best: .049      #  in ($/KwH)
+    Median: .0654   #  in ($/KwH)
+    Worst: .081     #  in ($/KwH)
+
+scenario_assumptions: # All in MW
+  Scenario1:
+    UtilityPower: 4
+    PrimaryPower: 0
+    BackupPower: 2
+  Scenario2:
+    UtilityPower: 2
+    PrimaryPower: 2
+    BackupPower: 0
+  Scenario3:
+    UtilityPower: 2
+    PrimaryPower: 2
+    BackupPower: 2
+  Scenario4:
+    UtilityPower: 0
+    PrimaryPower: 4
+    BackupPower: 2
+
+generation_data:
+  Nuclear:
+    Best:
+      CapitalCost: 4000 # ($/Kwe)
+      CapacityFactor: .98 # Decimal
+      AssetLife: 60 #( number of years)
+      FixedOMCost: 100 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: .012 # ($/KWh)
+      HeatRate: 0 # (mmBTU/kWh)
+      AltFuelCost: 0 # ($/mmBTU)
+      DecommissionCost: .003 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 20 # (number of Years )
+    Median:
+      CapitalCost: 4000 # ($/Kwe)
+      CapacityFactor: .95 # Decimal
+      AssetLife: 40 #( number of years)
+      FixedOMCost: 250 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: .02 # ($/KWh)
+      HeatRate: 0 # (mmBTU/kWh)
+      AltFuelCost: 0 # ($/mmBTU)
+      DecommissionCost: .005 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 10 # (number of Years )
+    Worst:
+      CapitalCost: 20000 # ($/Kwe)
+      CapacityFactor: .85 # Decimal
+      AssetLife: 20 #( number of years)
+      FixedOMCost: 450 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: .028 # ($/KWh)
+      HeatRate: 0 # (mmBTU/kWh)
+      AltFuelCost: 0 # ($/mmBTU)
+      DecommissionCost: .007 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 5 # (number of Years )
+  Diesel:
+    Best:
+      CapitalCost: 500 # ($/Kwe)
+      CapacityFactor: .98 # Decimal
+      AssetLife: 10 #( number of years)
+      FixedOMCost: 20 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: .213 # ($/KWh)
+      HeatRate: .01065 # (mmBTU/kWh)
+      AltFuelCost: 20 # ($/mmBTU)
+      DecommissionCost: 0 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 1 # (number of Years )
+    Median:
+      CapitalCost: 800 # ($/Kwe)
+      CapacityFactor: .95 # Decimal
+      AssetLife: 8 #( number of years)
+      FixedOMCost: 30 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: .23 # ($/KWh)
+      HeatRate: .0092 # (mmBTU/kWh)
+      AltFuelCost: 25 # ($/mmBTU) 25
+      DecommissionCost: 0 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 1 # (number of Years )
+    Worst:
+      CapitalCost: 1100 # ($/Kwe)
+      CapacityFactor: .85 # Decimal
+      AssetLife: 5 #( number of years)
+      FixedOMCost: 35 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: .256 # ($/KWh)
+      HeatRate: .00853333 # (mmBTU/kWh)
+      AltFuelCost: 30 # ($/mmBTU)
+      DecommissionCost: 0 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 1 # (number of Years )
+  NaturalGas:
+    Best:
+      CapitalCost: 800 # ($/Kwe)
+      CapacityFactor: .98 # Decimal
+      AssetLife: 10 #( number of years)
+      FixedOMCost: 10 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: .028 # ($/KWh)
+      HeatRate: .0081 # (mmBTU/kWh)
+      AltFuelCost: 2.9 # ($/mmBTU)
+      DecommissionCost: 0 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 1 # (number of Years )
+    Median:
+      CapitalCost: 1100 # ($/Kwe)
+      CapacityFactor: .95 # Decimal
+      AssetLife: 8 #( number of years)
+      FixedOMCost: 20 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: .0314 # ($/KWh)
+      HeatRate: .0087 # (mmBTU/kWh)
+      AltFuelCost: 3.6 # ($/mmBTU)
+      DecommissionCost: 0 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 1 # (number of Years )
+    Worst:
+      CapitalCost: 2000 # ($/Kwe)
+      CapacityFactor: .85 # Decimal
+      AssetLife: 5 #( number of years)
+      FixedOMCost: 20 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: .035 # ($/KWh)
+      HeatRate: .0097 # (mmBTU/kWh)
+      AltFuelCost: 4.3 # ($/mmBTU)
+      DecommissionCost: 0 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 1 # (number of Years )
+  None:
+    Best:
+      CapitalCost: 0 # ($/Kwe)
+      CapacityFactor: 1 # Decimal
+      AssetLife: 1 #( number of years)
+      FixedOMCost: 0 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: 0 # ($/KWh)
+      HeatRate: 0 # (mmBTU/kWh)
+      AltFuelCost: 0 # ($/mmBTU)
+      DecommissionCost: 0 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 1 # (number of Years )
+    Median:
+      CapitalCost: 0 # ($/Kwe)
+      CapacityFactor: 1 # Decimal
+      AssetLife: 1 #( number of years)
+      FixedOMCost: 0 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: 0 # ($/KWh)
+      HeatRate: 0 # (mmBTU/kWh)
+      AltFuelCost: 0 # ($/mmBTU)
+      DecommissionCost: 0 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 1 # (number of Years )
+    Worst:
+      CapitalCost: 0 # ($/Kwe)
+      CapacityFactor: 1 # Decimal
+      AssetLife: 1 #( number of years)
+      FixedOMCost: 0 #($/Kwe)
+      VariableOMCost: 0 #($/Kwh)
+      FuelCost: 0 # ($/KWh)
+      HeatRate: 0 # (mmBTU/kWh)
+      AltFuelCost: 0 # ($/mmBTU)
+      DecommissionCost: 0 # ($/Kwh)
+      RefurbishmentCost: 0 # ($)
+      CoreLife: 1 # (number of Years )
