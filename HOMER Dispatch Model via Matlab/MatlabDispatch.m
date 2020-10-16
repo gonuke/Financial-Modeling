@@ -51,7 +51,7 @@ function [simulation_state, matlab_simulation_variables] = MatlabDispatch(simula
       simulation_state.dc_bus.unmet_load = 0;
  
 % define intermediate variables that we do not want to see in model output
-  battery_max_discharge_power = 0; % AC
+  battery_max_discharge_power = 0; % AC this one is unecessary since we will only compare this value with others when we don't have excess solar
   battery_max_charge_power = 0;    % DC
   generator_max_possible_output_from_load_and_battery = 0; % AC
   
@@ -60,8 +60,8 @@ function [simulation_state, matlab_simulation_variables] = MatlabDispatch(simula
       %example code has the following two commands but I think they are
       %redundant since these two are already defined with HOMER design
       %interface
-      %simulation.converters(1).rectifier_efficiency = 90;
-      %simulation_parameters.converters(1).inverter_efficiency = 95;
+      simulation.converters(1).rectifier_efficiency = 90;
+      simulation_parameters.converters(1).inverter_efficiency = 95;
       rect_efficiency = simulation_parameters.converters(1).rectifier_efficiency;
       inv_efficiency = simulation_parameters.converters(1).inverter_efficiency;
   end
@@ -143,7 +143,7 @@ function [simulation_state, matlab_simulation_variables] = MatlabDispatch(simula
               simulation_state.ac_bus.load_requested - parameters(option_1,primary_load_served);
           % ac bus capacity shortage
           parameters(option_1,ac_bus_capacity_shortage) = ...
-              parameters(option_1,ac_bus_capacity_requested) - parameters(option_1,ac_bus_operating_capacity_served);
+              max(0,parameters(option_1,ac_bus_capacity_requested) - parameters(option_1,ac_bus_operating_capacity_served));
           
     
       else % battery is not enough to meet the load
@@ -188,23 +188,30 @@ function [simulation_state, matlab_simulation_variables] = MatlabDispatch(simula
                  simulation_state.ac_bus.load_requested - parameters(option_1,primary_load_served);
              % ac bus capacity shortage
              parameters(option_1,ac_bus_capacity_shortage) = ...
-                 parameters(option_1,ac_bus_capacity_requested) - parameters(option_1,ac_bus_operating_capacity_served);
+                 max(0,parameters(option_1,ac_bus_capacity_requested) - parameters(option_1,ac_bus_operating_capacity_served));
              
           else % we run generator at min_load
              % generator output: minimum load
              parameters(option_1,generator_power_setpoint) = min_load;
              % inverter output in ac
              parameters(option_1,inverter_power_output) = ...
+                 min(simulation_parameters.converters(1).inverter_capacity, ...
                  max(0, matlab_simulation_variables.net_load - parameters(option_1,generator_power_setpoint));
              % inverter input in dc
              parameters(option_1,inverter_power_input) = parameters(option_1,inverter_power_output)/(inv_efficiency/100);
              % battery net charge
              parameters(option_1,battery_power_setpoint) = ...
                  simulation_state.batteries(1).power_setpoint - parameters(option_1,inverter_power_input);
-             % rectifier input set to zero
-             parameters(option_1,rectifier_power_input) = 0;
-             % rectifier output set to zero
-             parameters(option_1,rectifier_power_output) = 0;
+             % rectifier input
+             parameters(option_1,rectifier_power_input) = ...
+                 min(simulation_parameters.converters(1).rectifier_capacity,...   
+                 min(battery_max_charge_power - parameters(option_1,battery_power_setpoint),...
+                 parameters(option_1,generator_power_setpoint) - parameters(option_1,inverter_power_output)));
+             % rectifier output
+             parameters(option_1,rectifier_power_output) = parameters(option_1,rectifier_power_input)*(rect_efficiency/100);
+             % battery net charge
+             parameters(option_1,battery_power_setpoint) = ...
+                 parameters(option_1,battery_power_setpoint) + parameters(option_1,rectifier_power_output);
              % primary load served
              parameters(option_1,primary_load_served) = ...
                  parameters(option_1,inverter_power_output) + ...
@@ -229,7 +236,7 @@ function [simulation_state, matlab_simulation_variables] = MatlabDispatch(simula
              parameters(option_1,ac_bus_unmet_load) = simulation_state.ac_bus.load_requested - parameters(option_1,primary_load_served);
              % ac bus capacity shortage
              parameters(option_1,ac_bus_capacity_shortage) = ...
-                 parameters(option_1,ac_bus_capacity_requested) - parameters(option_1,ac_bus_operating_capacity_served);
+                 max(0,parameters(option_1,ac_bus_capacity_requested) - parameters(option_1,ac_bus_operating_capacity_served));
              
           end
       end
@@ -397,7 +404,7 @@ function [simulation_state, matlab_simulation_variables] = MatlabDispatch(simula
           % ac bus operating capacity requested
           parameters(option_3,ac_bus_capacity_requested) = ...
               parameters(option_3,primary_load_served) + ...
-              (simulation_parameters.operating_reserve.timestep_requirement/100) * parameters(option_1,primary_load_served);
+              (simulation_parameters.operating_reserve.timestep_requirement/100) * parameters(option_3,primary_load_served);
           % ac bus operating capacity served
           parameters(option_3,ac_bus_operating_capacity_served) = ...
               actual_inverted_power + simulation_state.generators(1).power_available;
