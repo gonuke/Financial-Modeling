@@ -311,9 +311,14 @@ if simulation_parameters.has_converter == true
                  (simulation_parameters.operating_reserve.timestep_requirement/100) * parameters(option_1,primary_load_served);
              % ac bus operating capacity served: maximum capacity in ac
              if simulation_parameters.has_converter == true
+                 if simulation_parameters.has_battery == true
                  parameters(option_1,ac_bus_operating_capacity_served) = ...
                  simulation_state.batteries(1).max_discharge_power + actual_inverted_power + ...
                  simulation_state.generators(1).power_available;
+                 else
+                 parameters(option_1,ac_bus_operating_capacity_served) = ...
+                 actual_inverted_power + simulation_state.generators(1).power_available;    
+                 end
              else
                  parameters(option_1,ac_bus_operating_capacity_served) = ...
                  actual_inverted_power + simulation_state.generators(1).power_available;
