@@ -15,7 +15,9 @@ myErr.severity_code = '';
 % low
 generator_unit_fuel_cost = 6030;
 % median
-%matlab_simulation_variables.generator_unit_fuel_cost = 15400;
+%generator_unit_fuel_cost = 15400;
+% worst
+%generator_unit_fuel_cost = 15400;
 % lhv, MJ/kg
 generator_lhv = 12960000;
 % a conversion from MJ to kWh
@@ -30,6 +32,8 @@ matlab_simulation_variables.generator_fuel_cost = ...
 matlab_simulation_variables.generator_OM = 14.61;
 % median cost
 % matlab_simulation_variables.generator_OM = 33.45;
+% worst cost
+%matlab_simulation_variables.generator_OM = 58.33;
 
 % set a reactor ramp rate in %/min
 % matlab_simulation_variables.generator_ramp_rate = 5;
