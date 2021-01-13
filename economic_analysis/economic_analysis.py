@@ -15,7 +15,7 @@ def select_lng(Scenario, generation_type_one, generation_type_two, my_data):
         my_data['generation_data']['NaturalGas']['Best']['RealFuelCost']= my_data['model_assumptions']['LNG']['Best']
         my_data['generation_data']['NaturalGas']['Median']['RealFuelCost']= my_data['model_assumptions']['LNG']['Median']
         my_data['generation_data']['NaturalGas']['Worst']['RealFuelCost']= my_data['model_assumptions']['LNG']['Worst']
-    elif (Scenario in ('Scenario3', 'Scenario4') and generation_type_two == 'NaturalGas'):
+    elif (Scenario in ('Scenario1', 'Scenario3', 'Scenario4') and generation_type_two == 'NaturalGas'):
         my_data['generation_data']['NaturalGas']['Best']['RealFuelCost']= my_data['model_assumptions']['LNG']['Best']
         my_data['generation_data']['NaturalGas']['Median']['RealFuelCost']= my_data['model_assumptions']['LNG']['Median']
         my_data['generation_data']['NaturalGas']['Worst']['RealFuelCost']= my_data['model_assumptions']['LNG']['Worst']
@@ -56,10 +56,17 @@ def evaluate_generation_costs_two(Scenario, generation_type_two_data, interest):
 
         total_annual_generation = my_data['scenario_assumptions'][Scenario]['BackupPower']*HrPerDay*MW2KW*my_data['model_assumptions']['DaysOfBackupPower']
         
-        npv_capital = my_data['scenario_assumptions'][Scenario]['BackupPower'] * generation_type_two_data['CapitalCost']*MW2KW
-        npv_reserve = my_data['model_assumptions']['DaysOfResilience']*generation_type_two_data['RealFuelCost']*my_data['scenario_assumptions'][Scenario]['BackupPower']*MW2KW*HrPerYr/DaysOfPowerPerYear
-        npv_om = npv_factor(interest, generation_type_two_data['AssetLife'])*((generation_type_two_data['FixedOMCost'] * my_data['scenario_assumptions'][Scenario]['BackupPower']*MW2KW) + (generation_type_two_data['VariableOMCost'] * total_annual_generation))
-        npv_fuel = npv_factor(interest, generation_type_two_data['AssetLife'])*generation_type_two_data['RealFuelCost'] *total_annual_generation
+        npv_capital = my_data['scenario_assumptions'][Scenario]['BackupPower'] * \
+                     generation_type_two_data['CapitalCost'] * MW2KW
+        npv_reserve = generation_type_two_data['RealFuelCost'] * \
+                      my_data['scenario_assumptions'][Scenario]['BackupPower'] * MW2KW * HrPerYr * \
+                      my_data['model_assumptions']['DaysOfResilience'] / DaysOfPowerPerYear 
+        npv_om = npv_factor(interest, generation_type_two_data['AssetLife']) * \
+                ( ( generation_type_two_data['FixedOMCost'] * \
+                    my_data['scenario_assumptions'][Scenario]['BackupPower'] * MW2KW ) + 
+                  ( generation_type_two_data['VariableOMCost'] * total_annual_generation ) )
+        npv_fuel = npv_factor(interest, generation_type_two_data['AssetLife']) * \
+                   generation_type_two_data['RealFuelCost'] * total_annual_generation
     
         return -np.pmt(interest, generation_type_two_data['AssetLife'], npv_capital+npv_om+npv_reserve+npv_fuel)
     
