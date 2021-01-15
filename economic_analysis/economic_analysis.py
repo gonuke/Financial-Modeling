@@ -15,10 +15,14 @@ def select_lng(Scenario, generation_type_one, generation_type_two, my_data):
         my_data['generation_data']['NaturalGas']['Best']['RealFuelCost']= my_data['model_assumptions']['LNG']['Best']
         my_data['generation_data']['NaturalGas']['Median']['RealFuelCost']= my_data['model_assumptions']['LNG']['Median']
         my_data['generation_data']['NaturalGas']['Worst']['RealFuelCost']= my_data['model_assumptions']['LNG']['Worst']
-    elif (Scenario in ('Scenario3', 'Scenario4') and generation_type_two == 'NaturalGas'):
+    elif (Scenario in ('Scenario1','Scenario3', 'Scenario4') and generation_type_two == 'NaturalGas'):
         my_data['generation_data']['NaturalGas']['Best']['RealFuelCost']= my_data['model_assumptions']['LNG']['Best']
         my_data['generation_data']['NaturalGas']['Median']['RealFuelCost']= my_data['model_assumptions']['LNG']['Median']
         my_data['generation_data']['NaturalGas']['Worst']['RealFuelCost']= my_data['model_assumptions']['LNG']['Worst']
+    else:
+        my_data['generation_data']['NaturalGas']['Best']['RealFuelCost']= my_data['generation_data']['NaturalGas']['Best']['FuelCost']
+        my_data['generation_data']['NaturalGas']['Median']['RealFuelCost']= my_data['generation_data']['NaturalGas']['Median']['FuelCost']
+        my_data['generation_data']['NaturalGas']['Worst']['RealFuelCost']= my_data['generation_data']['NaturalGas']['Worst']['FuelCost']
     return my_data
 
 def pmt_total(Scenario, generation_type_one_data, generation_type_two_data, interest):
@@ -28,8 +32,9 @@ def evaluate_generation_costs_utility(Scenario):
         
         UtilityRate = my_data['model_assumptions']['UtilityRate']
         UtilityPower = my_data['scenario_assumptions'][Scenario]['UtilityPower']
+        PrimaryPower = my_data['scenario_assumptions'][Scenario]['PrimaryPower']
         if Scenario == 'Scenario2':
-            return (UtilityRate*UtilityPower*MW2KW*HrPerYr)+(UtilityRate*UtilityPower*MW2KW*HrPerDay*my_data['model_assumptions']['DaysOfBackupPower'])
+            return (UtilityRate*UtilityPower*MW2KW*HrPerYr)+(UtilityRate*PrimaryPower*MW2KW*HrPerDay*my_data['model_assumptions']['DaysOfBackupPower'])
         else:
             return UtilityRate*UtilityPower*MW2KW*HrPerYr
     
@@ -57,7 +62,7 @@ def evaluate_generation_costs_two(Scenario, generation_type_two_data, interest):
         total_annual_generation = my_data['scenario_assumptions'][Scenario]['BackupPower']*HrPerDay*MW2KW*my_data['model_assumptions']['DaysOfBackupPower']
         
         npv_capital = my_data['scenario_assumptions'][Scenario]['BackupPower'] * generation_type_two_data['CapitalCost']*MW2KW
-        npv_reserve = my_data['model_assumptions']['DaysOfResilience']*generation_type_two_data['RealFuelCost']*my_data['scenario_assumptions'][Scenario]['BackupPower']*MW2KW*HrPerYr/DaysOfPowerPerYear
+        npv_reserve = my_data['model_assumptions']['DaysOfResilience']*generation_type_two_data['RealFuelCost']*my_data['scenario_assumptions'][Scenario]['BackupPower']*MW2KW*HrPerYr/DaysOfPowerPerYear   
         npv_om = npv_factor(interest, generation_type_two_data['AssetLife'])*((generation_type_two_data['FixedOMCost'] * my_data['scenario_assumptions'][Scenario]['BackupPower']*MW2KW) + (generation_type_two_data['VariableOMCost'] * total_annual_generation))
         npv_fuel = npv_factor(interest, generation_type_two_data['AssetLife'])*generation_type_two_data['RealFuelCost'] *total_annual_generation
     
@@ -71,7 +76,8 @@ def load_inputs():
     return inputs
 
 def initialize_real_fuel_costs(my_data):
-    fuel_type = input("Enter: f    for fuel in $/Kwh   or    Alt   for $/mmBTU",)
+    #fuel_type = input("Enter: f    for fuel in $/Kwh   or    Alt   for $/mmBTU",)
+    fuel_type = 'f'
     if fuel_type == 'f':
      for generation_type, generation_type_data in my_data['generation_data'].items():
         for generation_variation in generation_type_data: 
@@ -209,9 +215,12 @@ def sensitivity_analysis(my_data):
     writer_orig.save()
     
 def main_code(my_data):
-    generation_variation_nuclear = input("Enter Nuclear: Best, Median, Worst",)
-    generation_variation_diesel = input("Enter Diesel: Best, Median, Worst",)
-    generation_variation_naturalgas = input("Enter Natural Gas: Best, Median, Worst",)
+#    generation_variation_nuclear = input("Enter Nuclear: Best, Median, Worst",)
+#    generation_variation_diesel = input("Enter Diesel: Best, Median, Worst",)
+#    generation_variation_naturalgas = input("Enter Natural Gas: Best, Median, Worst",)
+    generation_variation_nuclear = 'Best'
+    generation_variation_diesel = 'Best'
+    generation_variation_naturalgas = 'Best'
     generation_variation_none = 'Median'
     generation_variation = { 'Nuclear': generation_variation_nuclear,
                             'Diesel': generation_variation_diesel, 
@@ -221,28 +230,34 @@ def main_code(my_data):
     for Scenario, cases in case_list.items():
         for generation_type_one, generation_type_two in cases:
             my_data = select_lng(Scenario,generation_type_one, generation_type_two, my_data)
-            Results.append([Scenario, generation_type_one, generation_type_two, interest, 
+            Results.append([Scenario, generation_type_one, generation_type_two, interest, my_data['model_assumptions']['DaysOfResilience'],
                             pmt_total(Scenario, my_data['generation_data'][generation_type_one][generation_variation[generation_type_one]],
                                       my_data['generation_data'][generation_type_two][generation_variation[generation_type_two]], interest)])
 
-    dfResults = pd.DataFrame(Results, columns = ['Scenario', 'Power Type','Backup', 'interest','Annual Payment'])
+    dfResults = pd.DataFrame(Results, columns = ['Scenario', 'Power Type','Backup', 'interest','Resilience','Annual Payment'])
     dfResults['Annual Payment'] = dfResults.apply(lambda x: "{0:,.2f}".format(x['Annual Payment']), axis=1)
-    print(dfResults)
+    with open('output.csv','w') as outf:
+        dfResults.to_csv(outf)
+    #print(dfResults)
     
 if __name__ == "__main__":
  Results = []
  my_data = load_inputs()
  my_data = initialize_real_fuel_costs(my_data)
  case_list = {
-    'Scenario1': list(zip(['None','None','None'], ['Nuclear','Diesel','NaturalGas'])), 
-    'Scenario2': list(zip(['Nuclear','Diesel','NaturalGas'],['None','None','None'])),
-    'Scenario3': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel'])),
-    'Scenario4': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel']))
+    'Scenario1': list(zip(['None'], ['NaturalGas'])), 
+    'Scenario2': list(zip(['Nuclear','NaturalGas'],['None','None'])),
+    'Scenario3': list(zip(['Nuclear'], ['NaturalGas'])),
+#    'Scenario4': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel']))
             }
- model_type = input("s / m / mc--   sensitivity or main or monte carlo",)
+ #model_type = input("s / m / mc--   sensitivity or main or monte carlo",)
+ model_type = 'm'
  if model_type == "m":
-    interest = float(input("Enter interest rate in decimal: ex. .02 for 2%",))
-    main_code(my_data)
+    #interest = float(input("Enter interest rate in decimal: ex. .02 for 2%",))
+    interest = 0.02
+    for interest in (0.02, 0.04, 0.06, 0.08, 0.1):
+        for my_data['model_assumptions']['DaysOfResilience'] in (7,14,21,28,35,42,49):
+            main_code(my_data)
  elif model_type == "s":
     sensitivity_analysis(my_data)
  elif model_type == 'mc':
