@@ -62,7 +62,10 @@ def evaluate_generation_costs_two(Scenario, generation_type_two_data, interest):
         total_annual_generation = my_data['scenario_assumptions'][Scenario]['BackupPower']*HrPerDay*MW2KW*my_data['model_assumptions']['DaysOfBackupPower']
         
         npv_capital = my_data['scenario_assumptions'][Scenario]['BackupPower'] * generation_type_two_data['CapitalCost']*MW2KW
-        npv_reserve = my_data['model_assumptions']['DaysOfResilience']*generation_type_two_data['RealFuelCost']*my_data['scenario_assumptions'][Scenario]['BackupPower']*MW2KW*HrPerYr/DaysOfPowerPerYear   
+        reserve_fuel_duration = my_data['model_assumptions']['DaysOfResilience']
+        if (Scenario == 'Scenario3'):
+            reserve_fuel_duration = 7
+        npv_reserve = reserve_fuel_duration*generation_type_two_data['RealFuelCost']*my_data['scenario_assumptions'][Scenario]['BackupPower']*MW2KW*HrPerYr/DaysOfPowerPerYear   
         npv_om = npv_factor(interest, generation_type_two_data['AssetLife'])*((generation_type_two_data['FixedOMCost'] * my_data['scenario_assumptions'][Scenario]['BackupPower']*MW2KW) + (generation_type_two_data['VariableOMCost'] * total_annual_generation))
         npv_fuel = npv_factor(interest, generation_type_two_data['AssetLife'])*generation_type_two_data['RealFuelCost'] *total_annual_generation
     
@@ -218,9 +221,9 @@ def main_code(my_data):
 #    generation_variation_nuclear = input("Enter Nuclear: Best, Median, Worst",)
 #    generation_variation_diesel = input("Enter Diesel: Best, Median, Worst",)
 #    generation_variation_naturalgas = input("Enter Natural Gas: Best, Median, Worst",)
-    generation_variation_nuclear = 'Best'
+    generation_variation_nuclear = 'Median'
+    generation_variation_naturalgas = 'Median'
     generation_variation_diesel = 'Best'
-    generation_variation_naturalgas = 'Best'
     generation_variation_none = 'Median'
     generation_variation = { 'Nuclear': generation_variation_nuclear,
                             'Diesel': generation_variation_diesel, 
@@ -246,7 +249,7 @@ if __name__ == "__main__":
  my_data = initialize_real_fuel_costs(my_data)
  case_list = {
     'Scenario1': list(zip(['None'], ['NaturalGas'])), 
-    'Scenario2': list(zip(['Nuclear','NaturalGas'],['None','None'])),
+#    'Scenario2': list(zip(['Nuclear'],['None'])),
     'Scenario3': list(zip(['Nuclear'], ['NaturalGas'])),
 #    'Scenario4': list(zip(['Nuclear','Diesel','NaturalGas'], ['Diesel','NaturalGas','Diesel']))
             }
